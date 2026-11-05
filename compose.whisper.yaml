@@ -1,0 +1,39 @@
+services:
+  whisper:
+    image: heimoshuiyu/whisper-fastapi@sha256:e6ea4a5ca181cc7cbb7d12ba69407c84703b224aaa9e558c5c875c55a3d65230
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${QWEN_WHISPER_PORT:-5001}:5000"
+    environment:
+      HF_HOME: /data/huggingface
+      XDG_CACHE_HOME: /data/cache
+      TMPDIR: /data/tmp
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    volumes:
+      - type: bind
+        source: ./data/whisper
+        target: /data
+    command:
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "5000"
+      - --model
+      - "${QWEN_WHISPER_MODEL:-small}"
+      - --device
+      - cpu
+      - --compute_type
+      - int8
+      - --threads
+      - "${QWEN_WHISPER_THREADS:-4}"
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/openapi.json', timeout=5).close()"
+      interval: 15s
+      timeout: 10s
+      start_period: 30m
+      retries: 3

@@ -1,0 +1,51 @@
+services:
+  qwen3-tts:
+    build:
+      context: .
+    image: qwen3-tts-local:0.1.1
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${QWEN_TTS_PORT:-8000}:8000"
+    volumes:
+      - type: bind
+        source: ./data/huggingface
+        target: /data/huggingface
+      - type: bind
+        source: ./data/gradio
+        target: /data/gradio
+      - type: bind
+        source: ./data/tmp
+        target: /data/tmp
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    shm_size: "1gb"
+    command:
+      - "${QWEN_TTS_MODEL:-Qwen/Qwen3-TTS-12Hz-0.6B-Base}"
+      - --ip
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --device
+      - cuda:0
+      - --dtype
+      - bfloat16
+      - --no-flash-attn
+      - --no-share
+      - --concurrency
+      - "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5).close()"
+      interval: 15s
+      timeout: 10s
+      start_period: 30m
+      retries: 3
